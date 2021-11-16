@@ -22,6 +22,13 @@ void backwards(char n[])
     }
 }
 
+void back(char *t)
+{
+    if(*(t+1)) back(t+1);
+    printf("%c", *t);
+} // second version
+
+
 void main()
 {   
     char n[] = "ABCD";
