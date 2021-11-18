@@ -24,7 +24,7 @@ void mat_type(matrix x)
     printf("\n");
 }
 
-
+//Normal saving and reading file
 void save_file(matrix A, char* txt_name)
 {
     FILE *file = fopen( txt_name ,"w+");
@@ -52,6 +52,29 @@ matrix read_file(char *txt_name)
     return A;
 }
 
+
+//Saving and reading file in binary form
+void save_file_bin(matrix A, char* txt_name)
+{
+    FILE *f = fopen(txt_name, "w+");
+    int B[]={A.column, A.verse};
+    fwrite(B, sizeof(int), 2, f);
+    fwrite(A.ptr, sizeof(float), A.column*A.verse, f);
+    fclose(f);
+}
+
+matrix read_bin(char *txt)
+{
+    FILE* f = fopen(txt, "r");
+    int t[2];
+    fread(t, sizeof(int), 2, f);
+
+    float *ptr = calloc(t[0]*t[1], sizeof(float));
+    fread(ptr, sizeof(float), t[0]*t[1], f);
+    return (matrix){*t, *(t+1), ptr};
+    fclose(f);
+}
+
 void main()
 {
     matrix A = mat_construct(4,4);
@@ -60,9 +83,12 @@ void main()
         *(A.ptr + i) = i;
     }
 
-    char *matrix_txt = "Matrix_txt";
+    char *matrix_txt = "matrix_txt";
+    char *bin = "bin_txt";
     //save_file(A, matrix_txt);
+    save_file_bin(A, bin);
+    matrix C = read_bin(bin);
 
-    matrix B = read_file(matrix_txt);
-    mat_type(B);
+    //matrix B = read_file(matrix_txt);
+    mat_type(C);
 }
