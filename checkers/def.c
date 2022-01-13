@@ -3,13 +3,14 @@
 #define DEF
 
 #define N 8
+#define WON 36
+#define LOST -36
 typedef enum {C, W, B, DW, DB} field_type; // C-clear, W - white, B- black , DW - lvluped white, DB - lvleduped black
 
 typedef struct
 {
     field_type field[N][N];
     int turn;       //whos turn;  1 - White, 0 - Black; 
-    int capture;    //are there captures
 }Board; 
 
 typedef struct 
@@ -24,5 +25,12 @@ typedef struct
     field to; 
 }move; 
 
+typedef struct l 
+{
+    move m;
+    int capture;
+    struct l* next;
+}legal_moves;
 
+Board A;
 #endif
