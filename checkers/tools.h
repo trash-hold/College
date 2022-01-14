@@ -51,11 +51,11 @@ void generate(Board *A)
 }
 void show_board(Board *A)
 {
-    printf("   A   B   C   D   E   F   G   H ");
-    printf("\n ---------------------------------\n |");
-    for(int i=0; i<N; i++, printf("\n ---------------------------------\n |"))
+    printf("\n   A   B   C   D   E   F   G   H ");
+    printf("\n ---------------------------------\n");
+    for(int i=0; i<N; i++, printf("\n ---------------------------------\n"))
     {
-        //printf("\n---------------------------------\n |");
+        printf(" |");
         for(int j = 0; j<N; j++)
         {
             switch(A->field[i][j])
@@ -64,16 +64,16 @@ void show_board(Board *A)
                     printf(" %c |", '.');
                     break;
                 case W:
-                    printf(" %c |", 'W');
+                    printf(" %c |", 'w');
                     break;
                 case B:
-                    printf(" %c |", 'B');
+                    printf(" %c |", 'b');
                     break;
                 case DW:
-                    printf(" %d |", 2);
+                    printf(" %c |", 'W');
                     break;
                 default:
-                    printf(" %d |", 1);
+                    printf(" %c |", 'B');
                     break;
             }
     
@@ -85,6 +85,11 @@ legal_moves *add_move(Board *A, legal_moves *head, field n);
 legal_moves *add_move_adv(Board *A, legal_moves *head, field n, field dir, int i);
 legal_moves *search(Board *A, legal_moves *head, move x);
 
+void lowercase(char t[])
+{
+    for(int i=0; t[i]; i++) if(t[i] >= 97 && t[i] <= 122) t[i] -= 32; 
+}
+
 field trans_index(char a, char b)
 {
     return (field) {(int) (b - '1'), (int) a - 65};
@@ -93,7 +98,7 @@ field trans_index(char a, char b)
 move trans_move(char t[])
 {
     //in case user uses lowercase characters
-    for(int i=0; i<5; i++) if(t[i] >= 97 && t[i] <= 122) t[i] -= 32;
+    lowercase(t);
     
     return (move) {trans_index(t[0], t[1]), trans_index(t[3], t[4])};
 }
@@ -167,12 +172,58 @@ void show_list(legal_moves *head)
     printf("List of possible moves: \n");
     while(list)
     {
-        printf("From: %d, %d \t to: %d, %d \n", list->m.from.x, list->m.from.y, list->m.to.x, list->m.to.y);
+        //format for devs:
+        //printf("From: %d %d \t to: %d, %d \n", list->m.from.x, list->m.from.y, list->m.to.x, list->m.to.y);
+
+        //format for users:
+        printf("From: %c%c \t To: %c%c \n", (char) list->m.from.y + 'A', (char) list->m.from.x + '1', (char) list->m.to.y + 'A', (char) list->m.to.x + '1');
         list = list -> next;
     }
 }
 
+int is_overflow(field x, field added)
+{
+    return (x.x + added.x >= 0 && x.x + added.x < N && x.y + added.y >= 0 && x.y + added.y < N) ? 1 : 0;
+}
+
 legal_moves *add_move(Board *A, legal_moves *head, field n)
+{
+    //First setting who the player and opponent is to know which directions are legal to move for clear fields
+    field_type player[2];
+    field_type opponent[2];
+    field dir[2];
+
+    if(A->turn) {player[0] = W; player[1] = DW; opponent[0] = B; opponent[1] = DB; dir[0] = (field) {-1, -1}; dir[1] = (field) {-1, 1};}
+    else {player[0] = B; player[1] = DB; opponent[0] = W; opponent[1] = DW; dir[0] = (field){1, 1}; dir[1] = (field) {1, -1};}
+
+    //For simpler code form function will run two loops: 1) for normal moves 2) for captures
+    for(int i=0; i<2; i++)
+    {
+        if(is_overflow(n, dir[i]))
+            if(A->field[n.x + dir[i].x][n.y + dir[i].y] == C)
+                head = new_element(head, (move){n, (field){n.x + dir[i].x, n.y + dir[i].y}}, 0);
+    }
+    for(int j=0; j<2; j++)
+    {
+        //After first two iterations change direction to check all adjecent fields
+        if(j) { dir[0] = (field) {-dir[0].x, -dir[0].y};  dir[1] = (field)  {-dir[1].x , -dir[1].y};} 
+        for(int i = 0; i<2; i++)
+        {
+            if(is_overflow(n, dir[i]) && is_overflow(n, (field) {2*dir[i].x, 2*dir[i].y}))
+                if(A->field[n.x + 2*dir[i].x][n.y + 2*dir[i].y] == C)
+                {
+                    //First if for capture of pawn, second for the queen
+                    if(A->field[n.x + dir[i].x][n.y + dir[i].y] == opponent[0])
+                        head = new_element(head, (move){n, (field){n.x + 2*dir[i].x, n.y + 2*dir[i].y}}, 1);
+                    else if(A->field[n.x + dir[i].x][n.y + dir[i].y] == opponent[1])
+                        head = new_element(head, (move){n, (field){n.x + 2*dir[i].x, n.y + 2*dir[i].y}}, 2);
+                } 
+        }          
+    }
+    return head;
+}
+
+/*legal_moves *add_move(Board *A, legal_moves *head, field n)
 {
     field_type player[2];
     field_type opponent[2];
@@ -212,7 +263,7 @@ legal_moves *add_move(Board *A, legal_moves *head, field n)
         }
     }
     return head;
-}
+}*/
 
 legal_moves *add_move_adv(Board *A, legal_moves *head, field n, field dir, int i)
 {
@@ -249,6 +300,8 @@ legal_moves *search(Board *A, legal_moves *head, move x)
 int is_other_capture(Board *A, field x)
 {
     legal_moves *head = create_list(A);
+    printf("Avaible moves for other capture \n");
+    show_list(head);
     if(!head->capture) return 0;
     while(head)
     {
@@ -370,7 +423,7 @@ int is_correct(Board *A, move x)
     legal_moves *temp = search(A, l, x);
 
     if(temp) return temp->capture ? 2 : 1;
-    else return 0;
+    else {printf("Incorrect move! \n"); return 0;}
 }
 
 void change_turn(Board *A, move x)
@@ -431,7 +484,7 @@ int Negamax(Board *A, int depth)
     return negamax(A, depth, LOST, WON);
 }
 
-void play()
+void AI_move()
 {
     int depth = 4; 
     //scanf("%d", &depth);
@@ -443,7 +496,7 @@ void play()
         int state, best = LOST;
         for(legal_moves *t = list; t; t=t->next)
         {
-            printf("Im at: %d, %d \n", t->m.to.x, t->m.to.y);
+            //printf("Im at: %d, %d \n", t->m.to.x, t->m.to.y);
             Board child = A; 
             make_move(&child, t, list->m);
             state = -Negamax(&child, depth);
@@ -452,17 +505,133 @@ void play()
             {
                 best = state;
                 best_move = &t->m;
-                printf("Best move: %d, %d, %d \n", best_move->to.x, best_move->to.y, state);
+                //printf("Best move: %d, %d, %d \n", best_move->to.x, best_move->to.y, state);
             }
         }
         if(!best_move) 
             best_move = &list->m;
         
-        //make_move(&A, list, *best_move);
         change_turn(&A, *best_move);
-        printf("Move to: %d, %d \n", best_move->to.x, best_move->to.y);   
+        printf("Moved from: %c%c \t to: %c%c \n", (char) best_move->from.y + 'A', (char) best_move->from.x + '1', (char) best_move->to.y + 'A', (char) best_move->to.x + '1');
     }
     else printf("No legal moves \n");
 }
 
+int is_call_for_help(char t[])
+{
+    lowercase(t);
+    if( t[1] == 'H' && t[0] == '!') return 1;
+    return 0;
+}
+
+int is_same(char input[], char template[])
+{
+    lowercase(input);
+    for(int i=0; input[i]; i++) if(input[i] != template[i]) return 0;
+    return 1;
+}
+
+void menu(int i)
+{
+    switch(i)
+    {
+        case 0:
+            printf("Welcome to checkers! \n Choose one of the options by typing: \n 1. Play \n 2. Tutorial and rules \n 3. Quit \n ");
+            break;
+        case 1:
+            printf("\n Choose the game mode: \n 1. Player vs Player \n 2. Player vs AI \n 3. AI vs AI \n ");
+            break;
+        case 2:
+            printf("Twarda bania i zacisniete piesci jebac leszczy \n");
+            printf("Rules \n 1. You can only move diagonally. White pawns move towards top border, black towards bottom. "); 
+            printf("\n 2a. If there is an opponent pawn adjacent to your pawn and there is a free field on the same diagonal just after the opponent's pawn, you can capture. *Queens don't have to be adjacent to the captured pawn \n");
+            printf("2b. If there is a move with capture you must make it. Addtionally you must make the most scored capture (queen capture > pawn capture) \n");
+            printf(" 2c. If after a capture you can make another one with same figure you get additional turn. \n 3. If you reach border opposite to the one you started on with a pawn, it's changed into queen. \n \n");
+            printf("Tutorial \n Symbols used on the board: \n (.) - empty field \n (w,W) white pawn, white queen \n (b,B) black pawn, black queen \n");
+            printf("\n Format of input: \n For moves the input should follow the scheme of \n From (space) To \n ");
+            printf("Both from and to take the form of letter + number. Correctly written input should look like: \n");
+            printf("D6 C5 \t or \t d6 c5 \n");
+            printf("If you have troubles with finding avaible move type: \n");
+            printf("!h or \t !H \n");
+            break;
+        case 3:
+            printf("Thank you for your time! \n Quitting...");
+            break;
+        case 4:
+            printf("Choose the difficulty: \n 1. Easy \n 2. Medium \n 3. Hard \n");
+            break;
+        default:
+            printf("Wrong input! \n");
+            break;
+    }
+}
+
+game_settings set_up()
+{
+    game_settings settings;
+    int correct_set = 0; 
+    menu(0);
+    while(!correct_set)
+    {
+        char input;
+        scanf("%c", &input);
+        while(input < '1' || input > '3') {scanf("%c", &input);}
+        printf("%c", input);
+    
+        menu((int) input - '0');
+        if(input == '1')
+            {
+                input = 'A';
+                while(input < '1' || input > '3') {scanf("%c", &input); printf("\n");}
+                switch(input)
+                {
+                    case '1':
+                        settings.game = PvP;
+                        correct_set = 1;
+                        break;
+                    case '2':
+                        settings.game = AI;
+                        input = 'A';
+                        menu(4);
+                        while(input < '1' || input > '3') {scanf("%c", &input); printf("\n");}
+
+                        if(input == '1') settings.difficulty = 2;
+                        else if(input == '2') settings.difficulty = 3;
+                        else settings.difficulty = 5;
+
+                        correct_set = 2;
+                        break;
+                    case '3':
+                        settings.game = Spectate;
+                        correct_set = 3;
+                        break;
+                }
+            }
+        else if(input == '3') {menu(3); settings.game = Quit; correct_set = -1;}
+    }
+}
+
+void player_move()
+{
+    legal_moves *head = create_list(&A);
+    char p1_move[5];
+    gets(p1_move);
+    if(is_call_for_help(p1_move)) show_list(head);
+    else {move p1 = trans_move(p1_move); change_turn(&A, p1);}
+}
+
+void game_with_AI()
+{
+    int Game_state = 0;
+    while(Game_state != LOST && Game_state!= WON)
+    {
+        show_board(&A);
+        if(A.turn == 1) player_move();
+        else AI_move();
+        Game_state = game_state(&A);
+        printf("\n It's %s's move now! \n", A.turn ? "Player" : "AI");
+    }
+    A.turn = 1;
+    printf("%s won! \n", Game_state == LOST ? "AI" : "Player");
+}
 #endif
