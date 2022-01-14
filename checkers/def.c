@@ -6,6 +6,7 @@
 #define WON 36
 #define LOST -36
 typedef enum {C, W, B, DW, DB} field_type; // C-clear, W - white, B- black , DW - lvluped white, DB - lvleduped black
+typedef enum {PvP, AI, Spectate, Quit} game_mode;
 
 typedef struct
 {
@@ -31,6 +32,13 @@ typedef struct l
     int capture;
     struct l* next;
 }legal_moves;
+
+typedef struct
+{
+    game_mode game;
+    // Easy - 2, Medium - 3, Hard - 5
+    int difficulty;
+}game_settings;
 
 Board A;
 #endif
