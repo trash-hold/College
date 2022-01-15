@@ -4,7 +4,10 @@
 #include "def.h"
 #include <stdio.h>
 #include <malloc.h>
+#include <time.h>
 #include <assert.h>
+
+//cross-platform inclusion for libraries to perform sleep()
 
 void generate(Board *A)
 {
@@ -119,7 +122,6 @@ legal_moves *new_element(legal_moves* head, move a, int cap)
         }
         t->next = ptr;
     }
-    //printf("NEW ITEM \n");
     return head ? head : ptr;
 }
 
@@ -300,8 +302,6 @@ legal_moves *search(Board *A, legal_moves *head, move x)
 int is_other_capture(Board *A, field x)
 {
     legal_moves *head = create_list(A);
-    printf("Avaible moves for other capture \n");
-    show_list(head);
     if(!head->capture) return 0;
     while(head)
     {
@@ -484,11 +484,8 @@ int Negamax(Board *A, int depth)
     return negamax(A, depth, LOST, WON);
 }
 
-void AI_move()
+void AI_move(int depth)
 {
-    int depth = 4; 
-    //scanf("%d", &depth);
-    
     legal_moves *list = create_list(&A);
     if(list)
     {
@@ -517,6 +514,31 @@ void AI_move()
     else printf("No legal moves \n");
 }
 
+move generate_move()
+{
+    legal_moves *head = create_list(&A);
+    legal_moves *temp = head;
+    int elements=0; 
+    while (temp)
+    {
+        elements++;
+        temp = temp->next;
+    }
+    if(elements)
+    {
+        srand(time(0));
+        int rand_num = rand()%elements;
+        while(rand_num)
+        {
+            head = head->next;
+            rand_num--;
+        }
+        return (move) head->m;
+
+    }
+    return (move){(field) {-1,-1}, (field) {-1,-1}};
+}
+
 int is_call_for_help(char t[])
 {
     lowercase(t);
@@ -536,32 +558,31 @@ void menu(int i)
     switch(i)
     {
         case 0:
-            printf("Welcome to checkers! \n Choose one of the options by typing: \n 1. Play \n 2. Tutorial and rules \n 3. Quit \n ");
+            printf("\n Choose one of the options by typing: \n 1. Play \n 2. Tutorial and rules \n 3. Quit \n ");
             break;
         case 1:
-            printf("\n Choose the game mode: \n 1. Player vs Player \n 2. Player vs AI \n 3. AI vs AI \n ");
+            printf("\n Choose the game mode: \n 1. Player vs Player \n 2. Player vs AI \n 3. AI vs AI");
             break;
         case 2:
-            printf("Twarda bania i zacisniete piesci jebac leszczy \n");
             printf("Rules \n 1. You can only move diagonally. White pawns move towards top border, black towards bottom. "); 
             printf("\n 2a. If there is an opponent pawn adjacent to your pawn and there is a free field on the same diagonal just after the opponent's pawn, you can capture. *Queens don't have to be adjacent to the captured pawn \n");
-            printf("2b. If there is a move with capture you must make it. Addtionally you must make the most scored capture (queen capture > pawn capture) \n");
+            printf(" 2b. If there is a move with capture you must make it. Addtionally you must make the most scored capture (queen capture > pawn capture) \n");
             printf(" 2c. If after a capture you can make another one with same figure you get additional turn. \n 3. If you reach border opposite to the one you started on with a pawn, it's changed into queen. \n \n");
-            printf("Tutorial \n Symbols used on the board: \n (.) - empty field \n (w,W) white pawn, white queen \n (b,B) black pawn, black queen \n");
-            printf("\n Format of input: \n For moves the input should follow the scheme of \n From (space) To \n ");
-            printf("Both from and to take the form of letter + number. Correctly written input should look like: \n");
-            printf("D6 C5 \t or \t d6 c5 \n");
-            printf("If you have troubles with finding avaible move type: \n");
-            printf("!h or \t !H \n");
+            printf("Tutorial \n Symbols used on the board: \n \t (.) - empty field \n \t (w,W) white pawn, white queen \n \t (b,B) black pawn, black queen \n");
+            printf("\n Format of input \n For moves the input should follow the scheme of \n \t [From] (space) [To] \n ");
+            printf("Both [From] and [To] take the form of letter + number. Correctly written input should look like: \n");
+            printf("\t  D6 C5 \t or \t d6 c5 \n");
+            printf("\n If you have troubles with finding avaible moves type: \n");
+            printf("\t !h \t or \t !H \n");
             break;
         case 3:
-            printf("Thank you for your time! \n Quitting...");
+            printf("\n Thank you for your time! \n Quitting...");
             break;
         case 4:
-            printf("Choose the difficulty: \n 1. Easy \n 2. Medium \n 3. Hard \n");
+            printf("\n Choose the difficulty: \n 1. Easy \n 2. Medium \n 3. Hard");
             break;
         default:
-            printf("Wrong input! \n");
+            printf("\n Wrong input! \n");
             break;
     }
 }
@@ -576,7 +597,6 @@ game_settings set_up()
         char input;
         scanf("%c", &input);
         while(input < '1' || input > '3') {scanf("%c", &input);}
-        printf("%c", input);
     
         menu((int) input - '0');
         if(input == '1')
@@ -607,15 +627,24 @@ game_settings set_up()
                         break;
                 }
             }
-        else if(input == '3') {menu(3); settings.game = Quit; correct_set = -1;}
+        else if(input == '3') {settings.game = Quit; correct_set = -1;}
+        else
+        {
+            printf("\n Press any key to proceed...");
+            scanf(" %c", &input);
+            printf("\n");
+            menu(0);
+        }
     }
+    return settings;
 }
 
 void player_move()
 {
     legal_moves *head = create_list(&A);
     char p1_move[5];
-    gets(p1_move);
+    fgets(p1_move, 6, stdin);
+    while(p1_move[0] == '\n') fgets(p1_move, 6, stdin);
     if(is_call_for_help(p1_move)) show_list(head);
     else {move p1 = trans_move(p1_move); change_turn(&A, p1);}
 }
@@ -623,15 +652,53 @@ void player_move()
 void game_with_AI()
 {
     int Game_state = 0;
+    printf("You are white's and it's your turn! \n");
     while(Game_state != LOST && Game_state!= WON)
     {
         show_board(&A);
         if(A.turn == 1) player_move();
-        else AI_move();
+        else AI_move(settings.difficulty);
         Game_state = game_state(&A);
-        printf("\n It's %s's move now! \n", A.turn ? "Player" : "AI");
+        (Game_state == WON || Game_state == LOST) ? 1 : printf("\n It's %s's move now! \n", A.turn ? "Player" : "AI");
     }
     A.turn = 1;
+    Game_state = game_state(&A);
     printf("%s won! \n", Game_state == LOST ? "AI" : "Player");
 }
+
+void game_PvP()
+{
+    int Game_state = 0;
+    printf("White's start!\n");
+    while(Game_state != LOST && Game_state!= WON)
+    {
+        show_board(&A);
+        if(A.turn == 1) player_move();
+        else player_move();
+        Game_state = game_state(&A);
+        (Game_state == WON || Game_state == LOST) ? 1 : printf("\n It's %s's move now! \n", A.turn ? "White" : "Black");
+    }
+    A.turn = 1;
+    Game_state = game_state(&A);
+    printf("%s won! \n", Game_state == LOST ? "Black" : "White");
+}
+
+void game_AI()
+{
+    int Game_state = 0;
+    printf("White's start!\n");
+    make_move(&A, (legal_moves*) create_list(&A), (move) generate_move());
+    while(Game_state != LOST && Game_state!= WON)
+    {
+        show_board(&A);
+        if(A.turn == 1) AI_move(4);
+        else AI_move(3);
+        Game_state = game_state(&A);
+        (Game_state == WON || Game_state == LOST) ? 1 : printf("\n It's %s's move now! \n", A.turn ? "White" : "Black");
+    }
+    A.turn = 1;
+    Game_state = game_state(&A);
+    printf("%s won! \n", Game_state == LOST ? "Black" : "White");
+}
+
 #endif
