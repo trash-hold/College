@@ -41,4 +41,5 @@ typedef struct
 }game_settings;
 
 Board A;
+game_settings settings;
 #endif
